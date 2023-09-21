@@ -1,4 +1,4 @@
-openai
-streamlit
-qrcode
-pillow
+streamlit==1.26.0
+qrcode==7.4.2
+Pillow==9.5.0
+reportlab==3.6.13

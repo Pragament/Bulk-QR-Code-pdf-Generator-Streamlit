@@ -4,76 +4,104 @@ from qrcode.image.pil import PilImage
 from PIL import Image
 import io
 import base64
-from urllib.parse import urlparse
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Image as PlatypusImage, PageBreak, Paragraph
+from reportlab.platypus import Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import PageTemplate, Frame
+from reportlab.lib.units import inch
 
+# Function to generate QR code from text
+def generate_qr_code_with_text(text, font_size):
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        box_size=10,
+        border=4
+    )
+    qr.add_data(text)
+    qr.make(fit=True)
 
-# Function to convert image to base64
-def get_image_as_base64(image: Image):
+    img = qr.make_image(fill_color="black", back_color="white", image_factory=PilImage)
+
+    # Convert PilImage to bytes-like object
     buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    return image_base64
+    img.save(buffer, format="PNG")
+    img_bytes = buffer.getvalue()
 
-def get_url_filename(url):
-    parsed_uri = urlparse(url)
-    domain = '{uri.netloc}'.format(uri=parsed_uri)
-    main_domain = domain.split('.')
-    main_domain = main_domain[1] if main_domain[0] == 'www' else main_domain[0]
-    path = parsed_uri.path.strip('/').replace('/', '_')
-    return f"{main_domain}_{path}" if path else main_domain
-
-
-
+    return img_bytes
 
 # Streamlit app title
-st.title("Bulk QR Code Generator")
-st.write("This is a simple Streamlit web app for generating QR codes based on user input. You can choose between generating a QR code for a URL or plain text with the ability to generate multiple URLs at once.")
+st.title("Bulk QR Code Generator and PDF Export")
+st.write("This is a simple Streamlit web app for generating QR codes based on user input. You can choose between entering multiple lines of text or multiple URLs, and the app will generate QR codes for each line and save them in a PDF with one QR code per page.")
 
-# QR code content options
-qr_content_options = ["URL", "Text"]
-# qr_content_options = ["URL", "Text", "Contact Information"]
-qr_content_type = st.selectbox("Select QR content type", qr_content_options)
+# Input type selection
+input_type = st.radio("Select input type:", ["Text", "URL"])
 
-if qr_content_type == "Contact Information":
-    first_name = st.text_input("First Name")
-    last_name = st.text_input("Last Name")
-    phone = st.text_input("Phone Number")
-    email = st.text_input("Email Address")
-    content = f"BEGIN:VCARD\nVERSION:3.0\nN:{last_name};{first_name}\nFN:{first_name} {last_name}\nTEL;TYPE=CELL:{phone}\nEMAIL:{email}\nEND:VCARD"
+if input_type == "Text":
+    input_label = "Enter your text (one per line)"
 else:
-    content = st.text_area("Enter your content (one per line for multiple QR codes)", height=150)
+    input_label = "Enter your URLs (one per line)"
 
-if st.button("Generate QR Code"):
+# Text input for multiple lines
+content = st.text_area(input_label, height=150)
+
+# Font size for text in PDF
+font_size = st.slider("Select font size for text in PDF", min_value=8, max_value=24, value=12)
+
+# Checkbox to show/hide text in PDF
+show_text = st.checkbox("Show text above QR code")
+
+if st.button("Generate QR Codes and Export to PDF"):
     if content:
         contents = content.split("\n")
 
+        # Create a PDF document
+        pdf_file_name = "qrcodes.pdf"
+        doc = SimpleDocTemplate(pdf_file_name, pagesize=letter)
+
+        styles = getSampleStyleSheet()
+        text_style = styles["Normal"]
+        text_style.fontSize = font_size
+
+        # Define a PageTemplate for adding text at the top left
+        def header(canvas, doc):
+            canvas.saveState()
+            canvas.setFont('Times-Bold', 12)
+            canvas.drawString(inch, doc.height - 0.75 * inch, "Input Text:")
+            canvas.restoreState()
+
+        page_template = PageTemplate(id='page_template', frames=[
+            Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='frame', showBoundary=0),
+        ], onPage=header)
+
+        doc.addPageTemplates([page_template])
+        qr_code_images = []
+
         for i, c in enumerate(contents):
-            if c.strip():
-                # Generate QR code
-                qr = qrcode.QRCode(
-                    version=1,
-                    error_correction=qrcode.constants.ERROR_CORRECT_H,
-                    box_size=10,
-                    border=4
-                )
-                qr.add_data(c)
-                qr.make(fit=True)
+            c = c.strip()
+            if c:
+                # Generate QR code for the line of text or URL
+                qr_code_img = generate_qr_code_with_text(c, font_size)
 
-                img = qr.make_image(fill_color="black", back_color="white", image_factory=PilImage)
+                if show_text:
+                    # Create a Paragraph with the text to display
+                    text_paragraph = Paragraph(c, text_style)
 
-                # Convert PilImage to bytes-like object
-                buffer = io.BytesIO()
-                img.save(buffer, format="PNG")
-                img_bytes = buffer.getvalue()
+                # Convert image bytes to a stream
+                img_stream = io.BytesIO(qr_code_img)
+                img = PlatypusImage(img_stream, width=doc.width, height=doc.height - 100)
 
-                img_base64 = get_image_as_base64(img)
+                if show_text:
+                    qr_code_images.append(text_paragraph)
+                qr_code_images.append(img)
+                qr_code_images.append(PageBreak())
 
-                st.markdown(f"##### {c}")
-                st.image(img_bytes, caption=f"QR code for {c}", use_column_width=True)
-                file_name = get_url_filename(c) if qr_content_type == "URL" else f"QR_{i}"
-                st.markdown(f'<a href="data:image/png;base64,{img_base64}" download="{file_name}.png" style="display:inline-block;background-color:#4CAF50;border:none;color:white;padding:8px 16px;text-align:center;text-decoration:none;font-size:16px;margin:4px 2px;cursor:pointer;">Download QR code</a>', unsafe_allow_html=True)
+        # Build the PDF with one QR code and text per page
+        doc.build(qr_code_images)
+
+        # Provide a download link for the generated PDF
+        st.success("QR Codes generated successfully! You can download the PDF below:")
+        st.markdown(f'<a href="{pdf_file_name}" download="{pdf_file_name}">Download QR Codes PDF</a>', unsafe_allow_html=True)
     else:
-        st.error("Please enter content for the QR code.")
-
-
-
+        st.error("Please enter content for the QR codes.")
