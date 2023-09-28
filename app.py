@@ -45,13 +45,15 @@ else:
 content = st.text_area(input_label, height=150)
 
 # Font size for text in PDF
-font_size = st.slider("Select font size for text in PDF", min_value=8, max_value=24, value=12)
+font_size = st.slider("Select font size for text in PDF", min_value=8, max_value=84, value=41)
 
 # QR code size
-qr_size = st.slider("Select QR code size", min_value=100, max_value=400, value=200)
+#Max 635 second page
+#Max 567 same page
+qr_size = st.slider("Select QR code size", min_value=100, max_value=635, value=567)
 
 # Checkbox to show/hide text in PDF
-show_text = st.checkbox("Show text above QR code")
+show_text = st.checkbox("Show text above QR code", True)
 
 if st.button("Generate QR Codes and Export to PDF"):
     if content:
