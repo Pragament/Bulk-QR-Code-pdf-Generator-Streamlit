@@ -2,7 +2,7 @@ import streamlit as st
 import qrcode
 from qrcode.image.pil import PilImage
 import io
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Image as PlatypusImage, PageBreak, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate, Spacer
@@ -45,12 +45,12 @@ else:
 content = st.text_area(input_label, height=150)
 
 # Font size for text in PDF
-font_size = st.slider("Select font size for text in PDF", min_value=8, max_value=84, value=41)
+font_size = st.slider("Select font size for text in PDF", min_value=8, max_value=84, value=40)
 
 # QR code size
 #Max 635 second page
 #Max 567 same page
-qr_size = st.slider("Select QR code size", min_value=100, max_value=635, value=567)
+qr_size = st.slider("Select QR code size", min_value=100, max_value=635, value=595)
 
 # Checkbox to show/hide text in PDF
 show_text = st.checkbox("Show text above QR code", True)
@@ -67,7 +67,7 @@ if st.button("Generate QR Codes and Export to PDF"):
                 self.allowSplitting = 0
                 BaseDocTemplate.__init__(self, filename, **kw)
 
-        doc = MyDocTemplate(pdf_file_name, pagesize=letter)
+        doc = MyDocTemplate(pdf_file_name, pagesize=A4)
 
         styles = getSampleStyleSheet()
         text_style = styles["Normal"]
@@ -102,7 +102,7 @@ if st.button("Generate QR Codes and Export to PDF"):
                 img = PlatypusImage(img_stream, width=qr_size, height=qr_size)
 
                 if show_text:
-                    qr_code_images.append(Spacer(1, 1*cm))  # Add 1cm gap
+                    #qr_code_images.append(Spacer(1, 1*cm))  # Add 1cm gap
                     qr_code_images.append(text_paragraph)
                 qr_code_images.append(Spacer(1, 1*cm))  # Add 1cm gap
                 qr_code_images.append(img)
