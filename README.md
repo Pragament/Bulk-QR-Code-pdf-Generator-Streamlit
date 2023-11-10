@@ -4,7 +4,7 @@
 This is a simple Streamlit web app for generating QR codes based on user input. You can choose between generating a QR code for a URL or plain text with the ability to generate multiple URLs at once.
 
 # Web App
-Click [Here](https://huggingface.co/spaces/Kaludi/QR-Code-Generator-Streamlit_App "Here") To View This App Online!
+Click [Here](https://bulk-qr-code-pdf-generator.streamlit.app/ "Here") To View This App Online!
 
 ![image](https://user-images.githubusercontent.com/63890666/227362083-2c2ae2c0-11cf-4328-8679-857a1dc96fb0.png)
 
@@ -36,7 +36,7 @@ Click [Here](https://huggingface.co/spaces/Kaludi/QR-Code-Generator-Streamlit_Ap
 
 3.  Install the required dependencies
 
-`pip install -r requirements.txt` 
+`pip install -r requirements.txt` or `pip3 install -r requirements.txt`
 
 4.  Run the Streamlit app
 

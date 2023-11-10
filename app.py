@@ -3,7 +3,7 @@ import qrcode
 from qrcode.image.pil import PilImage
 import io
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import  Image as PlatypusImage, PageBreak, Paragraph
+from reportlab.platypus import  Image as PlatypusImage, PageBreak, HRFlowable, Paragraph, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate, Spacer
 from reportlab.lib.units import cm
@@ -17,7 +17,7 @@ def generate_qr_code_with_text(text):
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_H,
         box_size=10,
-        border=4
+        border=0
     )
     qr.add_data(text)
     qr.make(fit=True)
@@ -47,11 +47,11 @@ else:
 content = st.text_area(input_label, height=150)
 
 # Font size for text in PDF
-font_size = st.slider("Select font size for text in PDF", min_value=8, max_value=100, value=72)
+font_size = st.slider("Select font size for text in PDF", min_value=8, max_value=100, value=50)
 
 # QR code size
-#Max 759 second page
-qr_size = st.slider("Select QR code size", min_value=100, max_value=759, value=759)
+#Max 759 second page, 412 for 2 in 1 page without <hr>
+qr_size = st.slider("Select QR code size", min_value=100, max_value=759, value=404)
 
 # Checkbox to show/hide text in PDF
 show_text = st.checkbox("Show text above QR code", True)
@@ -97,26 +97,37 @@ if st.button("Generate QR Codes and Export to PDF"):
         doc.addPageTemplates([MyPageTemplate('page_template')])
         qr_code_images = []
 
+        loop_counter = 0
         for i, c in enumerate(contents):
             c = c.strip()
             if c:
+                loop_counter=loop_counter+1
                 # Generate QR code for the line of text or URL
                 qr_code_img = generate_qr_code_with_text(c)
 
-                if show_text:
+                #if show_text:
                     # Create a Paragraph with the text to display
-                    text_paragraph = Paragraph(c, text_style)
+                text_paragraph = Paragraph(c, text_style)
 
                 # Convert image bytes to a stream
                 img_stream = io.BytesIO(qr_code_img)
                 img = PlatypusImage(img_stream, width=qr_size, height=qr_size)
 
-                if show_text:
+                #if show_text:
                     #qr_code_images.append(Spacer(1, 1*cm))  # Add 1cm gap
-                    qr_code_images.append(text_paragraph)
-                qr_code_images.append(Spacer(1, 2.05*cm))  # Add 1cm gap
-                qr_code_images.append(img)
-                qr_code_images.append(PageBreak())
+                    #qr_code_images.append(text_paragraph)
+                    #qr_code_images.append(Spacer(1, 2.05*cm))  # Add 1cm gap
+                tbl_data = [
+                    [text_paragraph, img, text_paragraph]
+                ]
+                tbl = Table(tbl_data)
+                tbl.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE')]))
+                qr_code_images.append(tbl)
+                #qr_code_images.append(img)
+                if loop_counter % 2 == 1:
+                    qr_code_images.append(HRFlowable(width="100%", thickness=1, lineCap='round', color='black', spaceBefore=4, spaceAfter=4, hAlign='CENTER', vAlign='BOTTOM', dash=10))
+                #qr_code_images.append(Paragraph('<br/>1<hr/>2<br/>\n', text_style))
+                #qr_code_images.append(PageBreak())
 
         # Build the PDF with one QR code, text, and gap per page
         doc.build(qr_code_images)
